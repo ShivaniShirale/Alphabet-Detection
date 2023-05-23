@@ -27,6 +27,8 @@ while True:
     H, W, _ = frame.shape
 
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    hand_count=0
+    hand_frame_coordinates=[]
 
     results = hands.process(frame_rgb)
     if results.multi_hand_landmarks:
@@ -38,7 +40,10 @@ while True:
                 mp_drawing_styles.get_default_hand_landmarks_style(),
                 mp_drawing_styles.get_default_hand_connections_style())
 
+        hand_count =0
         for hand_landmarks in results.multi_hand_landmarks:
+            x_=[]
+            y_=[]
             for i in range(len(hand_landmarks.landmark)):
                 x = hand_landmarks.landmark[i].x
                 y = hand_landmarks.landmark[i].y
@@ -51,19 +56,39 @@ while True:
                 y = hand_landmarks.landmark[i].y
                 data_aux.append(x - min(x_))
                 data_aux.append(y - min(y_))
+            hand_count+=1
 
-        x1 = int(min(x_) * W) - 10
-        y1 = int(min(y_) * H) - 10
+            x1 = int(min(x_) * W) - 10
+            y1 = int(min(y_) * H) - 10
 
-        x2 = int(max(x_) * W) - 10
-        y2 = int(max(y_) * H) - 10
+            x2 = int(max(x_) * W) - 10
+            y2 = int(max(y_) * H) - 10
 
-        prediction = model.predict([np.asarray(data_aux)])
+            hand_frame_coordinates.append(list([x1,y1,x2,y2]))
 
-        predicted_character = labels_dict[int(prediction[0])]
+        predictedChars=[]
+        totalCodsForOneHand = 42
+        startCords=0
+        endCords=42
+        for i in range(hand_count):
+            handCords = data_aux[startCords:endCords]
+            startCords+=totalCodsForOneHand
+            endCords+=totalCodsForOneHand
+            hand_prediction = model.predict([np.asarray(handCords)])
+            predicted_character = labels_dict[int(hand_prediction[0])]
+            predictedChars.append(predicted_character)
 
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 4)
-        cv2.putText(frame, predicted_character, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 0, 0), 3,
+
+
+        for i in range(hand_count):
+            coordinates = hand_frame_coordinates[i]
+            x1= coordinates[0]
+            y1= coordinates[1]
+            x2= coordinates[2]
+            y2= coordinates[3]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 4)
+
+            cv2.putText(frame, predictedChars[i], (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 0, 0), 3,
                     cv2.LINE_AA)
 
     cv2.imshow('frame', frame)
